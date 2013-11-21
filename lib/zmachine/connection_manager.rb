@@ -33,6 +33,7 @@ module ZMachine
       connection = build_connection(Connection, handler, *args, &block)
       connection.bind(address, port_or_type)
       @new_connections << connection
+      yield connection if block_given?
       connection
     end
 

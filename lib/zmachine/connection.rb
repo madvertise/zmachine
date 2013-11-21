@@ -232,9 +232,7 @@ module ZMachine
       client = @channel.accept
       connection_accepted(client) if client.connected?
       ZMachine.logger.debug("zmachine:connection:#{__method__}", connection: self, client: client) if ZMachine.debug
-      self.class.new.tap do |connection|
-        connection.channel = client
-      end
+      create_connection(client)
     end
 
     def connectable!
@@ -322,5 +320,13 @@ module ZMachine
       end
     end
 
+    private
+
+    def create_connection(client)
+      self.clone.tap do |connection|
+        connection.instance_variable_set(:@channel_key, nil)
+        connection.channel = client
+      end
+    end
   end
 end
