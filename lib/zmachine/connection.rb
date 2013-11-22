@@ -8,13 +8,22 @@ module ZMachine
     extend Forwardable
 
     attr_accessor :channel
+    attr_accessor :build_args
+    attr_accessor :build_block
 
     def self.new(*args, &block)
       allocate.instance_eval do
         initialize(*args, &block)
+        @build_args  = args
+        @build_block = block
+        yield self if block_given?
         post_init
         self
       end
+    end
+
+    def build_new_instance
+      self.class.new(*@build_args, &@build_block)
     end
 
     # channel type dispatch
@@ -232,7 +241,9 @@ module ZMachine
       client = @channel.accept
       connection_accepted(client) if client.connected?
       ZMachine.logger.debug("zmachine:connection:#{__method__}", connection: self, client: client) if ZMachine.debug
-      create_connection(client)
+      build_new_instance.tap do |instance|
+        instance.channel = client
+      end
     end
 
     def connectable!
@@ -317,15 +328,6 @@ module ZMachine
       @timer.cancel if @timer
       @timer = ZMachine.add_timer(@inactivity_timeout) do
         ZMachine.reactor.close_connection(self)
-      end
-    end
-
-    private
-
-    def create_connection(client)
-      self.clone.tap do |connection|
-        connection.instance_variable_set(:@channel_key, nil)
-        connection.channel = client
       end
     end
   end
